@@ -132,6 +132,7 @@
   <ItemGroup>
     <ClInclude Include="lodepng.h" />
     <ClInclude Include="shaderprogram.h" />
+    <ClInclude Include="tiny_obj_loader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="f_simplest.glsl" />

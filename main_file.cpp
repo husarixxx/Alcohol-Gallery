@@ -1,7 +1,7 @@
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_SWIZZLE
-
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -11,37 +11,118 @@
 #include <stdio.h>
 #include "lodepng.h"
 #include "shaderprogram.h"
+#include <iostream>
 
 const float PI = 3.141592653589793f;
-float speed_x = 0;
-float speed_y = 0;
 float aspectRatio = 1;
+float yaw = 0.0f;
+float moveSpeed = 1.5f;
+
+struct Model {
+	GLuint vao;
+	GLuint vbo[4];
+	size_t vertexCount;
+};
+
+struct ModelInstance {
+	Model* model;
+	glm::vec3 position;
+	glm::vec3 scale;
+	GLuint texture1 = 0;
+	float turn = 0.0f;
+};
+
+std::vector<Model> models;
+std::vector<ModelInstance> instances;
+
+glm::vec3 eye = glm::vec3(-4.0f, 1.0f, 0.0f); 
+glm::vec3 allLights[5];
+float moveForward = 0.0f;  
+float moveRight = 0.0f;    
 
 ShaderProgram* sp;
 
-GLuint tex0;
 GLuint tex1;
+GLuint tex2;
+GLuint tex3;
+GLuint tex4;
+GLuint tex5;
+GLuint tex6;
 
-//Procedura obsługi błędów
+
+Model loadModel(const char* filename) {
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+
+	Model model = { 0 };
+	glGenVertexArrays(1, &model.vao);
+	glBindVertexArray(model.vao);
+
+	glGenBuffers(4, model.vbo);
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename)) {
+		fprintf(stderr, "Nie można wczytać modelu: %s\n", filename);
+		exit(1);
+	}
+
+	std::vector<float> vertices, normals, texCoords;
+
+	for (const auto& shape : shapes) {
+		for (const auto& index : shape.mesh.indices) {
+			vertices.push_back(attrib.vertices[3 * index.vertex_index + 0]);
+			vertices.push_back(attrib.vertices[3 * index.vertex_index + 1]);
+			vertices.push_back(attrib.vertices[3 * index.vertex_index + 2]);
+			vertices.push_back(1.0f);
+
+			if (!attrib.normals.empty() && index.normal_index >= 0) {
+				normals.push_back(attrib.normals[3 * index.normal_index + 0]);
+				normals.push_back(attrib.normals[3 * index.normal_index + 1]);
+				normals.push_back(attrib.normals[3 * index.normal_index + 2]);
+				normals.push_back(0.0f);
+			}
+
+			if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
+				texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 0]);
+				texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 1]);
+			}
+		}
+	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, model.vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+	model.vertexCount = vertices.size() / 4;
+
+	glBindBuffer(GL_ARRAY_BUFFER, model.vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), normals.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, model.vbo[2]);
+	glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), texCoords.data(), GL_STATIC_DRAW);
+
+	glBindVertexArray(0);
+	return model;
+}
+
 void error_callback(int error, const char* description) {
 	fputs(description, stderr);
 }
 
-
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	if (action == GLFW_PRESS) {
-		if (key == GLFW_KEY_LEFT) speed_x = -PI / 2;
-		if (key == GLFW_KEY_RIGHT) speed_x = PI / 2;
-		if (key == GLFW_KEY_UP) speed_y = PI / 2;
-		if (key == GLFW_KEY_DOWN) speed_y = -PI / 2;
+	if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+		if (key == GLFW_KEY_W) moveForward = 1.0f;  
+		if (key == GLFW_KEY_S) moveForward = -1.0f; 
+		if (key == GLFW_KEY_A) moveRight = -1.0f;   
+		if (key == GLFW_KEY_D) moveRight = 1.0f;    
+		if (key == GLFW_KEY_LEFT) yaw += glm::radians(5.0f);
+		if (key == GLFW_KEY_RIGHT) yaw -= glm::radians(5.0f);
 	}
 	if (action == GLFW_RELEASE) {
-		if (key == GLFW_KEY_LEFT) speed_x = 0;
-		if (key == GLFW_KEY_RIGHT) speed_x = 0;
-		if (key == GLFW_KEY_UP) speed_y = 0;
-		if (key == GLFW_KEY_DOWN) speed_y = 0;
+		if (key == GLFW_KEY_W || key == GLFW_KEY_S) moveForward = 0.0f;
+		if (key == GLFW_KEY_A || key == GLFW_KEY_D) moveRight = 0.0f;
 	}
 }
+
 
 void windowResizeCallback(GLFWwindow* window, int width, int height) {
 	if (height == 0) return;
@@ -49,17 +130,15 @@ void windowResizeCallback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
 }
 
+
 GLuint readTexture(const char* filename) {
 	GLuint tex;
 	glActiveTexture(GL_TEXTURE0);
 
-	//Wczytanie do pamięci komputera
-	std::vector<unsigned char> image;   //Alokuj wektor do wczytania obrazka
-	unsigned width, height;   //Zmienne do których wczytamy wymiary obrazka
-	//Wczytaj obrazek
+	std::vector<unsigned char> image;  
+	unsigned width, height; 
 	unsigned error = lodepng::decode(image, width, height, filename);
 
-	//Import do pamięci karty graficznej
 	glGenTextures(1, &tex); //Zainicjuj jeden uchwyt
 	glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
 	//Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
@@ -72,102 +151,154 @@ GLuint readTexture(const char* filename) {
 	return tex;
 }
 
-
-//Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
-	//************Tutaj umieszczaj kod, który należy wykonać raz, na początku programu************
 	glClearColor(0, 0, 0, 1);
 	glEnable(GL_DEPTH_TEST);
 	glfwSetWindowSizeCallback(window, windowResizeCallback);
 	glfwSetKeyCallback(window, keyCallback);
 
+	glm::vec3 staticLights[4] = {
+		glm::vec3(-10.0f, 0.8f, 0.0f),
+		glm::vec3(2.0f, 0.8f, 0.0f),
+		glm::vec3(-4.0f, 0.8f, -6.0f),
+		glm::vec3(-4.0f, 0.8f, 6.0f),
+	};
+
+	for (int i = 0; i < 4; ++i)
+		allLights[i + 1] = staticLights[i];
+
 	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
 
-	tex0 = readTexture("metal.png");
-	tex1 = readTexture("sky.png");
+	tex1 = readTexture("obj//textures//test.png");
+	tex2 = readTexture("obj//textures//walter.png");
+	tex3 = readTexture("obj//textures//lamp.png");
+	tex4 = readTexture("obj//textures//carpet.png");
+	tex5 = readTexture("obj//textures//ceiling1.png");
+	tex6 = readTexture("obj//textures//ceiling2.png");
+	Model floorModel = loadModel("obj//models//floorfinalfinal.obj");
+	Model pedestal = loadModel("obj//models//pedestal.obj");
+	Model bottle1 = loadModel("obj//models//bottle1.obj");
+	Model lamp = loadModel("obj//models//lamp.obj");
+	Model wall = loadModel("obj//models//finalwalls.obj");
+	Model carpet = loadModel("obj//models//carpet.obj");
+	Model ceilingLamp = loadModel("obj//models//ceilinglamp.obj");
+	models.push_back(floorModel);
+	models.push_back(pedestal); 
+	models.push_back(bottle1);
+	models.push_back(lamp);
+	models.push_back(wall);
+	models.push_back(carpet);
+	models.push_back(ceilingLamp);
+
+	instances = {
+		{&models[0], glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.01f), tex1, 0.0f}, 
+
+		{&models[0], glm::vec3(0.0f, 2.6f, 0.0f), glm::vec3(0.01f), tex1, 0.0f},
+
+		{&models[1], glm::vec3(-4.0f, 0.0f, 6.0f), glm::vec3(0.4f), tex1, 0.0f},
+		{&models[1], glm::vec3(-4.0f, 0.0f, -6.0f), glm::vec3(0.4f), tex1, 0.0f},
+		{&models[1], glm::vec3(2.0f, 0.0f, 0.0f), glm::vec3(0.4f), tex1, 0.0f},
+		{&models[1], glm::vec3(-10.0f, 0.0f, 0.0f), glm::vec3(0.4f), tex1, 0.0f},
+
+		{&models[2], glm::vec3(-10.0f, 0.75f, 0.0f), glm::vec3(0.015f), tex2, 0.0f},
+		{&models[2], glm::vec3(2.0f, 0.75f, 0.0f), glm::vec3(0.015f), tex2, 0.0f},
+		{&models[2], glm::vec3(-4.0f, 0.75f, -6.0f), glm::vec3(0.015f), tex2, 0.0f},
+		{&models[2], glm::vec3(-4.0f, 0.75f, 6.0f), glm::vec3(0.015f), tex2, 0.0f},
+
+		{&models[3], glm::vec3(-4.0f, 0.0f, 6.5f), glm::vec3(0.2f), tex3, 0.0f},
+		{&models[3], glm::vec3(2.5f, 0.0f, 0.0f), glm::vec3(0.2f), tex3, 90.0f},
+		{&models[3], glm::vec3(-4.0f, 0.0f, -6.5f), glm::vec3(0.2f), tex3, 180.0f},
+		{&models[3], glm::vec3(-10.5f, 0.0f, 0.0f), glm::vec3(0.2f), tex3, 270.0f},
+
+		{&models[4], glm::vec3(0.0f, -0.1f, 0.0f), glm::vec3(0.01f), tex1, 0.0f},
+
+		{&models[5], glm::vec3(-4.0f, 0.0f, 0.0f), glm::vec3(0.025f), tex4, 0.0f},
+
+		{&models[6], glm::vec3(-4.0f, 2.5f, 0.0f), glm::vec3(0.8f), tex3, 90.0f}
+	};
 }
 
-
-//Zwolnienie zasobów zajętych przez program
 void freeOpenGLProgram(GLFWwindow* window) {
-	//************Tutaj umieszczaj kod, który należy wykonać po zakończeniu pętli głównej************
-
+	for (auto& model : models) {
+		glDeleteVertexArrays(1, &model.vao);
+		glDeleteBuffers(3, model.vbo);
+	}
 	delete sp;
-
-	glDeleteTextures(1, &tex0);
+	glDeleteTextures(1, &tex1);
 }
 
+void drawScene(GLFWwindow* window, glm::vec3 eye) {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glm::vec3 direction = glm::normalize(glm::vec3(sin(yaw), 0.0f, cos(yaw)));
+	glm::vec3 target = eye + glm::normalize(direction);
+	glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+	glm::mat4 V = glm::lookAt(eye, target, up);
+	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.01f, 50.0f);
 
+	allLights[0] = eye;
 
-//Procedura rysująca zawartość sceny
-void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
-	////************Tutaj umieszczaj kod rysujący obraz******************l
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	sp->use();
+	glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
+	glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
 
-	//glm::mat4 V = glm::lookAt(
-	//	glm::vec3(0, 0, -2.5),
-	//	glm::vec3(0, 0, 0),
-	//	glm::vec3(0.0f, 1.0f, 0.0f)); //Wylicz macierz widoku
+	glUniform3fv(sp->u("viewPos"), 1, glm::value_ptr(eye));
+	glUniform3fv(sp->u("lightPos"), 5, glm::value_ptr(allLights[0]));
+	
+	for (const auto& instance : instances) {
+		Model& model = *instance.model;
 
-	//glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.01f, 50.0f); //Wylicz macierz rzutowania
+		glBindVertexArray(model.vao);
 
-	//glm::mat4 M = glm::mat4(1.0f);
-	//M = glm::rotate(M, angle_y, glm::vec3(1.0f, 0.0f, 0.0f)); //Wylicz macierz modelu
-	//M = glm::rotate(M, angle_x, glm::vec3(0.0f, 1.0f, 0.0f)); //Wylicz macierz modelu
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, instance.texture1);
+		glUniform1i(sp->u("textureMap0"), 0);
+		
+		glEnableVertexAttribArray(sp->a("vertex"));
+		glBindBuffer(GL_ARRAY_BUFFER, model.vbo[0]);
+		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, 0);
 
-	//sp->use();//Aktywacja programu cieniującego
-	////Przeslij parametry programu cieniującego do karty graficznej
-	//glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
-	//glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
-	//glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+		if (sp->a("normal") != -1) {
+			glEnableVertexAttribArray(sp->a("normal"));
+			glBindBuffer(GL_ARRAY_BUFFER, model.vbo[1]);
+			glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, 0);
+		}
 
-	//glEnableVertexAttribArray(sp->a("vertex"));  //Włącz przesyłanie danych do atrybutu vertex
-	//glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, vertices); //Wskaż tablicę z danymi dla atrybutu vertex
+		if (sp->a("texCoord0") != -1) {
+			glEnableVertexAttribArray(sp->a("texCoord0"));
+			glBindBuffer(GL_ARRAY_BUFFER, model.vbo[2]);
+			glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, 0);
+		}
 
-	//glEnableVertexAttribArray(sp->a("color"));  //Włącz przesyłanie danych do atrybutu color
-	//glVertexAttribPointer(sp->a("color"), 4, GL_FLOAT, false, 0, colors); //Wskaż tablicę z danymi dla atrybutu color
+		glm::mat4 M = glm::translate(glm::mat4(1.0f), instance.position);
+		M = glm::rotate(M, glm::radians(instance.turn), glm::vec3(0.0f, 1.0f, 0.0f));
+		M = glm::scale(M, instance.scale);
+		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
 
-	//glEnableVertexAttribArray(sp->a("normal"));  //Włącz przesyłanie danych do atrybutu normal
-	//glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, normals); //Wskaż tablicę z danymi dla atrybutu normal
+		glDrawArrays(GL_TRIANGLES, 0, model.vertexCount);
 
-	//glEnableVertexAttribArray(sp->a("texCoord0"));  //Włącz przesyłanie danych do atrybutu texCoord0
-	//glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, texCoords); //Wskaż tablicę z danymi dla atrybutu texCoord0
+		glDisableVertexAttribArray(sp->a("vertex"));
+		glDisableVertexAttribArray(sp->a("normal"));
+		glDisableVertexAttribArray(sp->a("texCoord0"));
+		glBindVertexArray(0);
+	}
 
-
-	//glUniform1i(sp->u("textureMap0"), 0);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, tex0);
-
-	//glUniform1i(sp->u("textureMap1"), 1);
-	//glActiveTexture(GL_TEXTURE1);
-	//glBindTexture(GL_TEXTURE_2D, tex1);
-
-	//glDrawArrays(GL_TRIANGLES, 0, vertexCount); //Narysuj obiekt
-
-	//glDisableVertexAttribArray(sp->a("vertex"));  //Wyłącz przesyłanie danych do atrybutu vertex
-	//glDisableVertexAttribArray(sp->a("color"));  //Wyłącz przesyłanie danych do atrybutu color
-	//glDisableVertexAttribArray(sp->a("normal"));  //Wyłącz przesyłanie danych do atrybutu normal
-	//glDisableVertexAttribArray(sp->a("texCoord0"));  //Wyłącz przesyłanie danych do atrybutu texCoord0
-
-	glfwSwapBuffers(window); //Przerzuć tylny bufor na przedni
+	glfwSwapBuffers(window);
 }
-
 
 int main(void)
-{
-	GLFWwindow* window; //Wskaźnik na obiekt reprezentujący okno
+{	GLFWwindow* window; 
 
-	glfwSetErrorCallback(error_callback);//Zarejestruj procedurę obsługi błędów
+	glfwSetErrorCallback(error_callback);
 
-	if (!glfwInit()) { //Zainicjuj bibliotekę GLFW
+	if (!glfwInit()) { 
 		fprintf(stderr, "Nie można zainicjować GLFW.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	window = glfwCreateWindow(1000, 1000, "OpenGL", NULL, NULL);  //Utwórz okno 500x500 o tytule "OpenGL" i kontekst OpenGL.
+	window = glfwCreateWindow(750, 750, "OpenGL", NULL, NULL);
 
-	if (!window) //Jeżeli okna nie udało się utworzyć, to zamknij program
+	if (!window) 
 	{
 		fprintf(stderr, "Nie można utworzyć okna.\n");
 		glfwTerminate();
@@ -177,29 +308,34 @@ int main(void)
 	glfwMakeContextCurrent(window); //Od tego momentu kontekst okna staje się aktywny i polecenia OpenGL będą dotyczyć właśnie jego.
 	glfwSwapInterval(1); //Czekaj na 1 powrót plamki przed pokazaniem ukrytego bufora
 
-	if (glewInit() != GLEW_OK) { //Zainicjuj bibliotekę GLEW
+	if (glewInit() != GLEW_OK) {
 		fprintf(stderr, "Nie można zainicjować GLEW.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	initOpenGLProgram(window); //Operacje inicjujące
+	initOpenGLProgram(window); 
 
-	//Główna pętla
-	float angle_x = 0; //Aktualny kąt obrotu obiektu
-	float angle_y = 0; //Aktualny kąt obrotu obiektu
-	glfwSetTime(0); //Zeruj timer
-	while (!glfwWindowShouldClose(window)) //Tak długo jak okno nie powinno zostać zamknięte
-	{
-		angle_x += speed_x * glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
-		angle_y += speed_y * glfwGetTime(); //Zwiększ/zmniejsz kąt obrotu na podstawie prędkości i czasu jaki upłynał od poprzedniej klatki
-		glfwSetTime(0); //Zeruj timer
-		drawScene(window, angle_x, angle_y); //Wykonaj procedurę rysującą
-		glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
+	glfwSetTime(0); 
+	double prevTime = glfwGetTime();
+
+	while (!glfwWindowShouldClose(window)) {
+		double currTime = glfwGetTime();
+		float deltaTime = currTime - prevTime;
+		prevTime = currTime;
+
+		glm::vec3 front = glm::normalize(glm::vec3(sin(yaw), 0.0f, cos(yaw)));
+		glm::vec3 right = glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+		eye += front * moveForward * moveSpeed * deltaTime;   
+		eye += right * moveRight * moveSpeed * deltaTime;
+
+		drawScene(window, eye);
+		glfwPollEvents();
 	}
 
 	freeOpenGLProgram(window);
 
-	glfwDestroyWindow(window); //Usuń kontekst OpenGL i okno
-	glfwTerminate(); //Zwolnij zasoby zajęte przez GLFW
+	glfwDestroyWindow(window); 
+	glfwTerminate(); 
 	exit(EXIT_SUCCESS);
 }
