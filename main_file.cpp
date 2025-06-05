@@ -28,7 +28,7 @@ struct ModelInstance {
 	Model* model;
 	glm::vec3 position;
 	glm::vec3 scale;
-	GLuint texture1 = 0;
+	std::vector<GLuint>textures;
 	float turn = 0.0f;
 };
 
@@ -39,16 +39,11 @@ glm::vec3 eye = glm::vec3(-4.0f, 1.0f, 0.0f);
 glm::vec3 allLights[5];
 float moveForward = 0.0f;  
 float moveRight = 0.0f;    
+float rotationDir = 0.0f;
 
 ShaderProgram* sp;
 
-GLuint tex1;
-GLuint tex2;
-GLuint tex3;
-GLuint tex4;
-GLuint tex5;
-GLuint tex6;
-
+GLuint tex1, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10, tex11, tex12, tex13, tex14, tex15, tex16, tex17;
 
 Model loadModel(const char* filename) {
 	tinyobj::attrib_t attrib;
@@ -110,19 +105,21 @@ void error_callback(int error, const char* description) {
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-		if (key == GLFW_KEY_W) moveForward = 1.0f;  
-		if (key == GLFW_KEY_S) moveForward = -1.0f; 
-		if (key == GLFW_KEY_A) moveRight = -1.0f;   
-		if (key == GLFW_KEY_D) moveRight = 1.0f;    
-		if (key == GLFW_KEY_LEFT) yaw += glm::radians(5.0f);
-		if (key == GLFW_KEY_RIGHT) yaw -= glm::radians(5.0f);
+		if (key == GLFW_KEY_W) moveForward = 1.0f;
+		if (key == GLFW_KEY_S) moveForward = -1.0f;
+		if (key == GLFW_KEY_A) moveRight = -1.0f;
+		if (key == GLFW_KEY_D) moveRight = 1.0f;
+
+		if (key == GLFW_KEY_LEFT) rotationDir = 1.0f;
+		if (key == GLFW_KEY_RIGHT) rotationDir = -1.0f;
 	}
 	if (action == GLFW_RELEASE) {
 		if (key == GLFW_KEY_W || key == GLFW_KEY_S) moveForward = 0.0f;
 		if (key == GLFW_KEY_A || key == GLFW_KEY_D) moveRight = 0.0f;
+
+		if (key == GLFW_KEY_LEFT || key == GLFW_KEY_RIGHT) rotationDir = 0.0f;
 	}
 }
-
 
 void windowResizeCallback(GLFWwindow* window, int width, int height) {
 	if (height == 0) return;
@@ -142,9 +139,9 @@ GLuint readTexture(const char* filename) {
 	glGenTextures(1, &tex); //Zainicjuj jeden uchwyt
 	glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
 	//Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
 		GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*)image.data());
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -169,19 +166,34 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
 
-	tex1 = readTexture("obj//textures//test.png");
+	tex1 = readTexture("obj//textures//stone_floor.png");
 	tex2 = readTexture("obj//textures//walter.png");
-	tex3 = readTexture("obj//textures//lamp.png");
+	tex3 = readTexture("obj//textures//lamp1.png");
 	tex4 = readTexture("obj//textures//carpet.png");
 	tex5 = readTexture("obj//textures//ceiling1.png");
 	tex6 = readTexture("obj//textures//ceiling2.png");
-	Model floorModel = loadModel("obj//models//floorfinalfinal.obj");
+	tex7 = readTexture("obj//textures/wall_base.png");
+	tex8 = readTexture("obj//textures//wall_roughness.png");
+	tex9 = readTexture("obj//textures//wall_normals.png");
+	tex10 = readTexture("obj//textures//stone.png");
+	tex11 = readTexture("obj//textures//test1.png");
+	tex12 = readTexture("obj//textures//bottle2.png");
+	tex13 = readTexture("obj//textures//bottle3.png");
+	tex14 = readTexture("obj//textures//bottle1.png");
+	tex15 = readTexture("obj//textures//bottle4.png");
+	tex16 = readTexture("obj//textures//text.png");
+	tex17 = readTexture("obj//textures//lamp2.png");
+;	Model floorModel = loadModel("obj//models//floorfinalfinal.obj");
 	Model pedestal = loadModel("obj//models//pedestal.obj");
 	Model bottle1 = loadModel("obj//models//bottle1.obj");
 	Model lamp = loadModel("obj//models//lamp.obj");
 	Model wall = loadModel("obj//models//finalwalls.obj");
 	Model carpet = loadModel("obj//models//carpet.obj");
 	Model ceilingLamp = loadModel("obj//models//ceilinglamp.obj");
+	Model bottle2 = loadModel("obj//models//bottle2.obj");
+	Model bottle3 = loadModel("obj//models//bottle3.obj");
+	Model bottle4 = loadModel("obj//models//bottle4.obj");
+	Model text = loadModel("obj//models//wypij.obj");
 	models.push_back(floorModel);
 	models.push_back(pedestal); 
 	models.push_back(bottle1);
@@ -189,32 +201,41 @@ void initOpenGLProgram(GLFWwindow* window) {
 	models.push_back(wall);
 	models.push_back(carpet);
 	models.push_back(ceilingLamp);
+	models.push_back(bottle2);
+	models.push_back(bottle3);
+	models.push_back(bottle4);
+	models.push_back(text);
 
 	instances = {
-		{&models[0], glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.01f), tex1, 0.0f}, 
+		{&models[0], glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.01f), {tex1}, 0.0f},
 
-		{&models[0], glm::vec3(0.0f, 2.6f, 0.0f), glm::vec3(0.01f), tex1, 0.0f},
+		{&models[0], glm::vec3(0.0f, 2.6f, 0.0f), glm::vec3(0.01f), {tex1}, 0.0f },
 
-		{&models[1], glm::vec3(-4.0f, 0.0f, 6.0f), glm::vec3(0.4f), tex1, 0.0f},
-		{&models[1], glm::vec3(-4.0f, 0.0f, -6.0f), glm::vec3(0.4f), tex1, 0.0f},
-		{&models[1], glm::vec3(2.0f, 0.0f, 0.0f), glm::vec3(0.4f), tex1, 0.0f},
-		{&models[1], glm::vec3(-10.0f, 0.0f, 0.0f), glm::vec3(0.4f), tex1, 0.0f},
+		{&models[1], glm::vec3(-4.0f, 0.0f, 6.0f), glm::vec3(0.4f), {tex10}, 0.0f},
+		{&models[1], glm::vec3(-4.0f, 0.0f, -6.0f), glm::vec3(0.4f), {tex10}, 0.0f },
+		{&models[1], glm::vec3(2.0f, 0.0f, 0.0f), glm::vec3(0.4f), {tex10}, 0.0f },
+		{&models[1], glm::vec3(-10.0f, 0.0f, 0.0f), glm::vec3(0.4f), {tex10}, 0.0f},
 
-		{&models[2], glm::vec3(-10.0f, 0.75f, 0.0f), glm::vec3(0.015f), tex2, 0.0f},
-		{&models[2], glm::vec3(2.0f, 0.75f, 0.0f), glm::vec3(0.015f), tex2, 0.0f},
-		{&models[2], glm::vec3(-4.0f, 0.75f, -6.0f), glm::vec3(0.015f), tex2, 0.0f},
-		{&models[2], glm::vec3(-4.0f, 0.75f, 6.0f), glm::vec3(0.015f), tex2, 0.0f},
+		{&models[2], glm::vec3(-10.0f, 0.75f, 0.0f), glm::vec3(0.015f), {tex15}, 0.0f },
+		{&models[9], glm::vec3(2.0f, 0.75f, 0.0f), glm::vec3(0.008f), {tex12}, 0.0f },
+		{&models[7], glm::vec3(-4.0f, 0.75f, -6.0f), glm::vec3(0.015f), {tex13}, 0.0f},
+		{&models[8], glm::vec3(-4.0f, 0.75f, 6.0f), glm::vec3(0.015f), {tex14}, 0.0f },
 
-		{&models[3], glm::vec3(-4.0f, 0.0f, 6.5f), glm::vec3(0.2f), tex3, 0.0f},
-		{&models[3], glm::vec3(2.5f, 0.0f, 0.0f), glm::vec3(0.2f), tex3, 90.0f},
-		{&models[3], glm::vec3(-4.0f, 0.0f, -6.5f), glm::vec3(0.2f), tex3, 180.0f},
-		{&models[3], glm::vec3(-10.5f, 0.0f, 0.0f), glm::vec3(0.2f), tex3, 270.0f},
+		{&models[3], glm::vec3(-4.0f, 0.0f, 6.5f), glm::vec3(0.2f), {tex3, tex17}, 0.0f },
+		{&models[3], glm::vec3(2.5f, 0.0f, 0.0f), glm::vec3(0.2f), {tex3, tex17}, 90.0f },
+		{&models[3], glm::vec3(-4.0f, 0.0f, -6.5f), glm::vec3(0.2f), {tex3, tex17}, 180.0f},
+		{&models[3], glm::vec3(-10.5f, 0.0f, 0.0f), glm::vec3(0.2f), {tex3, tex17}, 270.0f },
 
-		{&models[4], glm::vec3(0.0f, -0.1f, 0.0f), glm::vec3(0.01f), tex1, 0.0f},
+		{&models[4], glm::vec3(0.0f, -0.1f, 0.0f), glm::vec3(0.01f), {tex11}, 0.0f},
 
-		{&models[5], glm::vec3(-4.0f, 0.0f, 0.0f), glm::vec3(0.025f), tex4, 0.0f},
+		{&models[5], glm::vec3(-4.0f, 0.0f, 0.0f), glm::vec3(0.025f), {tex4}, 0.0f },
 
-		{&models[6], glm::vec3(-4.0f, 2.5f, 0.0f), glm::vec3(0.8f), tex3, 90.0f}
+		{&models[6], glm::vec3(-4.0f, 2.5f, 0.0f), glm::vec3(0.8f), {tex3, tex17}, 90.0f },
+
+		{&models[10], glm::vec3(-4.0f, 0.65f, -5.5f), glm::vec3(0.001f), {tex16}, 0.0f },
+		{&models[10], glm::vec3(-4.0f, 0.65f, 5.5f), glm::vec3(0.001f), {tex16}, 180.0f },
+		{&models[10], glm::vec3(1.5f, 0.65f, 0.0f), glm::vec3(0.001f), {tex16}, 270.0f },
+		{&models[10], glm::vec3(-9.5f, 0.65f, 0.0f), glm::vec3(0.001f), {tex16}, 90.0f }
 	};
 }
 
@@ -249,11 +270,14 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 		Model& model = *instance.model;
 
 		glBindVertexArray(model.vao);
+		for (int i = 0; i < instance.textures.size(); i++) {
+			glActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_2D, instance.textures[i]);
+			std::string uniformName = "texUnits[" + std::to_string(i) + "]";
+			glUniform1i(sp->u(uniformName.c_str()), i);
+		}
+		glUniform1i(sp->u("numTextures"), instance.textures.size());
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, instance.texture1);
-		glUniform1i(sp->u("textureMap0"), 0);
-		
 		glEnableVertexAttribArray(sp->a("vertex"));
 		glBindBuffer(GL_ARRAY_BUFFER, model.vbo[0]);
 		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, 0);
@@ -318,11 +342,13 @@ int main(void)
 	glfwSetTime(0); 
 	double prevTime = glfwGetTime();
 
+	const float rotationSpeed = 90.0f;
 	while (!glfwWindowShouldClose(window)) {
 		double currTime = glfwGetTime();
 		float deltaTime = currTime - prevTime;
 		prevTime = currTime;
 
+		yaw += rotationDir * glm::radians(rotationSpeed) * deltaTime;
 		glm::vec3 front = glm::normalize(glm::vec3(sin(yaw), 0.0f, cos(yaw)));
 		glm::vec3 right = glm::normalize(glm::cross(front, glm::vec3(0.0f, 1.0f, 0.0f)));
 
