@@ -42,6 +42,7 @@ struct ModelInstance {
 	float floatAmplitude = 0.0f;
 	float floatSpeed = 0.0f;
 	float floatPhase = 0.0f;
+	
 	glm::vec3 basePosition; // pozycja bazowa (bez animacji)
 	//koniec animacji
 	//animacja picia butli
@@ -51,6 +52,8 @@ struct ModelInstance {
 
 	int textIndex = -1;
 	bool isActive = true;  // Domyślnie obiekt jest aktywny
+	bool shouldFloat = false; // Domyślnie false
+
 	//koniec butli
 };
 
@@ -276,7 +279,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 		{&models[4], glm::vec3(0.0f, -0.1f, 0.0f), glm::vec3(0.01f), {tex11}, 0.0f},
 
-		{&models[5], glm::vec3(-4.0f, 0.0f, 0.0f), glm::vec3(0.025f), {tex4}, 0.0f },
+		{&models[5], glm::vec3(-4.0f, 0.0f, 0.0f), glm::vec3(0.025f), {tex4}, 0.0f, 0.1f, 1.0f, 0.0f, glm::vec3(-4.0f, 0.0f, 0.0f), false, glm::vec3(0), 0.0f, -1, true, true},
 
 		{&models[6], glm::vec3(-4.0f, 2.5f, 0.0f), glm::vec3(0.8f), {tex3, tex17}, 90.0f },
 
@@ -385,7 +388,7 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 			M = glm::rotate(M, glm::radians(instance.turn), glm::vec3(-2.0f, 0.0f, -1.0f));
 
 			M = glm::rotate(M, glm::radians(-30.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
-			//M = glm::rotate(M, glm::radians(-30.0f), glm::vec3(1.0f, 0.0f, 1.0f));
+			
 		}
 		else {
 			//inne
@@ -432,8 +435,8 @@ int main(void)
 		exit(EXIT_FAILURE);
 	}
 
-	glfwMakeContextCurrent(window); //Od tego momentu kontekst okna staje się aktywny i polecenia OpenGL będą dotyczyć właśnie jego.
-	glfwSwapInterval(1); //Czekaj na 1 powrót plamki przed pokazaniem ukrytego bufora
+	glfwMakeContextCurrent(window);
+	glfwSwapInterval(1); 
 
 	if (glewInit() != GLEW_OK) {
 		fprintf(stderr, "Nie można zainicjować GLEW.\n");
@@ -460,11 +463,22 @@ int main(void)
 		eye += right * moveRight * moveSpeed * deltaTime;
 
 		// petla do poruszania butelek
+		// petla do poruszania obiektów
+		// petla do poruszania obiektów
 		for (auto& instance : instances) {
-			if (instance.floatAmplitude > 0.0f) {
+			
+			if (&instance == &instances[15]) {
+				if (drinkCounter >= 3 && instance.floatAmplitude > 0.0f) {
+					float time = glfwGetTime();
+					instance.position.y = instance.basePosition.y + instance.floatAmplitude * sin(instance.floatSpeed * time + instance.floatPhase) + 0.1f;
+				}
+			}
+			// Dla innych obiektów (butelki)
+			else if (instance.floatAmplitude > 0.0f) {
 				float time = glfwGetTime();
 				instance.position.y = instance.basePosition.y + instance.floatAmplitude * sin(instance.floatSpeed * time + instance.floatPhase) + 0.1f;
 			}
+		
 		}
 
 		//petla do picia aniamcji piweczka elegancko
