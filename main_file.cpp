@@ -30,6 +30,12 @@ struct ModelInstance {
 	glm::vec3 scale;
 	std::vector<GLuint>textures;
 	float turn = 0.0f;
+	// kod do animacji  kod niżej
+	float floatAmplitude = 0.0f;
+	float floatSpeed = 0.0f;
+	float floatPhase = 0.0f;
+	glm::vec3 basePosition; // pozycja bazowa (bez animacji)
+	//koniec animacji
 };
 
 std::vector<Model> models;
@@ -216,10 +222,10 @@ void initOpenGLProgram(GLFWwindow* window) {
 		{&models[1], glm::vec3(2.0f, 0.0f, 0.0f), glm::vec3(0.4f), {tex10}, 0.0f },
 		{&models[1], glm::vec3(-10.0f, 0.0f, 0.0f), glm::vec3(0.4f), {tex10}, 0.0f},
 
-		{&models[2], glm::vec3(-10.0f, 0.75f, 0.0f), glm::vec3(0.015f), {tex15}, 0.0f },
-		{&models[9], glm::vec3(2.0f, 0.75f, 0.0f), glm::vec3(0.008f), {tex12}, 0.0f },
-		{&models[7], glm::vec3(-4.0f, 0.75f, -6.0f), glm::vec3(0.015f), {tex13}, 0.0f},
-		{&models[8], glm::vec3(-4.0f, 0.75f, 6.0f), glm::vec3(0.015f), {tex14}, 0.0f },
+		{&models[2], glm::vec3(-10.0f, 0.75f, 0.0f), glm::vec3(0.015f), {tex15}, 0.0f,0.1f, 2.0f, 0.0f, glm::vec3(-10.0f, 0.75f, 0.0f) },
+		{&models[9], glm::vec3(2.0f, 0.75f, 0.0f), glm::vec3(0.008f), {tex12}, 0.0f, 0.1f, 2.0f, 1.5f, glm::vec3(2.0f, 0.75f, 0.0f) }, //test butelek
+		{&models[7], glm::vec3(-4.0f, 0.75f, -6.0f), glm::vec3(0.015f), {tex13}, 0.0f,  0.1f, 2.0f, 3.0f, glm::vec3(-4.0f, 0.75f, -6.0f)},
+		{&models[8], glm::vec3(-4.0f, 0.75f, 6.0f), glm::vec3(0.015f), {tex14}, 0.0f,   0.1f, 2.0f, 4.5f, glm::vec3(-4.0f, 0.75f, 6.0f)},
 
 		{&models[3], glm::vec3(-4.0f, 0.0f, 6.5f), glm::vec3(0.2f), {tex3, tex17}, 0.0f },
 		{&models[3], glm::vec3(2.5f, 0.0f, 0.0f), glm::vec3(0.2f), {tex3, tex17}, 90.0f },
@@ -297,7 +303,14 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 		glm::mat4 M = glm::translate(glm::mat4(1.0f), instance.position);
 		M = glm::rotate(M, glm::radians(instance.turn), glm::vec3(0.0f, 1.0f, 0.0f));
 		M = glm::scale(M, instance.scale);
+
+
+
+
+
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
+
+
 
 		glDrawArrays(GL_TRIANGLES, 0, model.vertexCount);
 
@@ -355,6 +368,13 @@ int main(void)
 		eye += front * moveForward * moveSpeed * deltaTime;   
 		eye += right * moveRight * moveSpeed * deltaTime;
 
+		// petla do poruszania butelek
+		for (auto& instance : instances) {
+			if (instance.floatAmplitude > 0.0f) {
+				float time = glfwGetTime();
+				instance.position.y = instance.basePosition.y + instance.floatAmplitude * sin(instance.floatSpeed * time + instance.floatPhase) + 0.1f;
+			}
+		}
 		drawScene(window, eye);
 		glfwPollEvents();
 	}
