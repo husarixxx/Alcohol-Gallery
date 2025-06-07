@@ -21,13 +21,12 @@ float yaw = 0.0f;
 float moveSpeed = 1.5f;
 int drinkCounter = 0;
 
-//zmienne do sprawdzania anim,acji picia butelki
 bool Drinking = false;
 int curBottleIndex = -1;
 float drinkingStartTime = 0.0f;
 bool blackScreen = false;
 float blackScreenStartTime = 0.0f;
-//end
+
 struct Model {
 	GLuint vao;
 	GLuint vbo[4];
@@ -40,23 +39,18 @@ struct ModelInstance {
 	glm::vec3 scale;
 	std::vector<GLuint>textures;
 	float turn = 0.0f;
-	// kod do animacji  kod niżej
 	float floatAmplitude = 0.0f;
 	float floatSpeed = 0.0f;
 	float floatPhase = 0.0f;
 	
-	glm::vec3 basePosition; // pozycja bazowa (bez animacji)
-	//koniec animacji
-	//animacja picia butli
+	glm::vec3 basePosition; 
 	bool isBottle = false;
-	glm::vec3 originalPosition;//orignalna pozycja
-	float drinkProgress = 0.0f; //postep animacji picia
+	glm::vec3 originalPosition;
+	float drinkProgress = 0.0f;
 
 	int textIndex = -1;
-	bool isActive = true;  // Domyślnie obiekt jest aktywny
-	bool shouldFloat = false; // Domyślnie false
-
-	//koniec butli
+	bool isActive = true;  
+	bool shouldFloat = false;
 };
 
 std::vector<Model> models;
@@ -69,7 +63,6 @@ float moveRight = 0.0f;
 float rotationDir = 0.0f;
 
 ShaderProgram* sp;
-
 
 GLuint tex1, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10, tex11, tex12, tex13, tex14, tex15, tex16, tex17, tex18;
 
@@ -195,8 +188,7 @@ GLuint readTexture(const char* filename) {
 	glGenTextures(1, &tex); 
 	glBindTexture(GL_TEXTURE_2D, tex); 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
-		GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*)image.data());
+	glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,	GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*)image.data());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -217,12 +209,11 @@ void initOpenGLProgram(GLFWwindow* window) {
 		glm::vec3(-4.0f, 2.5f, 0.0f)
 	};
 
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < 5; ++i) {
 		allLights[i + 1] = staticLights[i];
+	}
 
-
-		sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
-
+	sp = new ShaderProgram("v_simplest.glsl", NULL, "f_simplest.glsl");
 
 	tex1 = readTexture("obj//textures//stone_floor.png");
 	tex2 = readTexture("obj//textures//walter.png");
@@ -296,15 +287,12 @@ void initOpenGLProgram(GLFWwindow* window) {
 		{&models[10], glm::vec3(-9.5f, 0.65f, 0.0f), glm::vec3(0.001f), {tex16}, 90.0f },
 		{&models[10], glm::vec3(1.5f, 0.65f, 0.0f), glm::vec3(0.001f), {tex16}, 270.0f },
 		{&models[10], glm::vec3(-4.0f, 0.65f, -5.5f), glm::vec3(0.001f), {tex16}, 0.0f },
-		{&models[10], glm::vec3(-4.0f, 0.65f, 5.5f), glm::vec3(0.001f), {tex16}, 180.0f }
-		
-
+		{&models[10], glm::vec3(-4.0f, 0.65f, 5.5f), glm::vec3(0.001f), {tex16}, 180.0f },
 
 		{&models[11], glm::vec3(-9.5f, 0.0f, 0.0f), glm::vec3(0.0125f), {tex18}, 0.0f },
 		{&models[11], glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0125f), {tex18}, 0.0f },
 		{&models[11], glm::vec3(-4.0f, 0.0f, -4.0f), glm::vec3(0.0125f), {tex18}, 90.0f },
 		{&models[11], glm::vec3(-4.0f, 0.0f, 5.5f), glm::vec3(0.0125f), {tex18}, 90.0f }
-
 	};
 }
 
@@ -317,17 +305,15 @@ void freeOpenGLProgram(GLFWwindow* window) {
 	glDeleteTextures(1, &tex1);
 }
 
-void drawScene(GLFWwindow* window, glm::vec3 eye) {
-	// 1) Jeśli trwa faza "czarnego ekranu", po prostu wyczyść bufor i wyjdź:
-	if (blackScreen) {
+void drawScene(GLFWwindow* window, glm::vec3 eye) {	
+	if (blackScreen) {	
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		return;
+		return;		
 	}
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//-------------------------------------------------------------------------
-
+	
 	glm::vec3 direction = glm::normalize(glm::vec3(sin(yaw), 0.0f, cos(yaw)));
 	glm::vec3 target = eye + glm::normalize(direction);
 	glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -357,7 +343,10 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 
 	
 	for (const auto& instance : instances) {
-		if (!instance.isActive) continue;
+		if (!instance.isActive) {
+			continue;
+		}
+
 		Model& model = *instance.model;
 
 		glBindVertexArray(model.vao);
@@ -367,8 +356,8 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 			std::string uniformName = "texUnits[" + std::to_string(i) + "]";
 			glUniform1i(sp->u(uniformName.c_str()), i);
 		}
-		glUniform1i(sp->u("numTextures"), instance.textures.size());
 
+		glUniform1i(sp->u("numTextures"), instance.textures.size());
 		glEnableVertexAttribArray(sp->a("vertex"));
 		glBindBuffer(GL_ARRAY_BUFFER, model.vbo[0]);
 		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, 0);
@@ -387,47 +376,29 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 
 		glm::mat4 M = glm::translate(glm::mat4(1.0f), instance.position);
 
-		// jesli butelka
 		if (instance.isBottle && Drinking && &instance == &instances[curBottleIndex]) {
-			/*M = glm::rotate(M, glm::radians(instance.turn), glm::vec3(0.0f, 0.0f, 1.0f));
-
-			M = glm::rotate(M, glm::radians(-30.0f), glm::vec3(1.0f, 0.0f, 0.0f));*/
-			// Oblicz kierunek do kamery
 			glm::vec3 toCamera = glm::normalize(eye - instance.position);
 
-			//macierz orientacji
 			glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 			glm::vec3 right = glm::normalize(glm::cross(toCamera, up));
 			up = glm::normalize(glm::cross(right, toCamera));
 
-			//orientację
 			glm::mat4 rotation = glm::mat4(1.0f);
 			rotation[0] = glm::vec4(right, 0.0f);
 			rotation[1] = glm::vec4(up, 0.0f);
 			rotation[2] = glm::vec4(-toCamera, 0.0f);
 
-			M = M * rotation;
-
-			// Dodaj pochylenie do picia/
+			M = M * rotation;						
 			M = glm::rotate(M, glm::radians(instance.turn), glm::vec3(-2.0f, 0.0f, -1.0f));
-
-			M = glm::rotate(M, glm::radians(-30.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
-			
+			M = glm::rotate(M, glm::radians(-30.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 			
 		}
 		else {
-			//inne
 			M = glm::rotate(M, glm::radians(instance.turn), glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 		
 		M = glm::scale(M, instance.scale);
 
-
-
-
-
 		glUniformMatrix4fv(sp->u("M"), 1, false, glm::value_ptr(M));
-
-
 
 		glDrawArrays(GL_TRIANGLES, 0, model.vertexCount);
 
@@ -436,8 +407,6 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 		glDisableVertexAttribArray(sp->a("texCoord0"));
 		glBindVertexArray(0);
 	}
-
-	//glfwSwapBuffers(window); //tu nie mozna bo jest  w while w mainie zrobione!!!
 }
 
 int main(void)
@@ -452,8 +421,7 @@ int main(void)
 
 	window = glfwCreateWindow(750, 750, "OpenGL", NULL, NULL);
 
-	if (!window) 
-	{
+	if (!window) {
 		fprintf(stderr, "Nie można utworzyć okna.\n");
 		glfwTerminate();
 		exit(EXIT_FAILURE);
@@ -492,75 +460,59 @@ int main(void)
 			eye = newEye;
 		}
 
-		// petla do poruszania butelek
-		// petla do poruszania obiektów
-		// petla do poruszania obiektów
-		for (auto& instance : instances) {
-			
+		for (auto& instance : instances) {			
 			if (&instance == &instances[15]) {
 				if (drinkCounter >= 3 && instance.floatAmplitude > 0.0f) {
 					float time = glfwGetTime();
 					instance.position.y = instance.basePosition.y + instance.floatAmplitude * sin(instance.floatSpeed * time + instance.floatPhase) + 0.1f;
 				}
 			}
-			// Dla innych obiektów (butelki)
 			else if (instance.floatAmplitude > 0.0f) {
 				float time = glfwGetTime();
 				instance.position.y = instance.basePosition.y + instance.floatAmplitude * sin(instance.floatSpeed * time + instance.floatPhase) + 0.1f;
-			}
-		
+			}		
 		}
 
-		//petla do picia aniamcji piweczka elegancko
 		if (Drinking) {
 			float elapsed = (float)(glfwGetTime() - drinkingStartTime);
 			auto& bottle = instances[curBottleIndex];
-			// Faza 1: Animacja picia (2 sekundy)
 			if (elapsed < 2.0f) {
-				// Faza 1: podchodzenie butelki i obrót
 				auto& bottle = instances[curBottleIndex];
 				bottle.drinkProgress = elapsed / 2.0f;
 				glm::vec3 toCamera = glm::normalize(eye - bottle.originalPosition);
-				bottle.position = bottle.originalPosition + toCamera * bottle.drinkProgress * 0.5f;
+				bottle.position = bottle.originalPosition + toCamera * bottle.drinkProgress * 1.5f;
 				bottle.turn = bottle.drinkProgress * 90.0f;
 
 			}
-			//pauza
-			else if (elapsed < 2.0f + 1.0f) { 
-				// Butelka pozostaje w końcowej pozycji
-				bottle.position = bottle.originalPosition + glm::normalize(eye - bottle.originalPosition) * 0.5f;
+			else if (elapsed < 3.0f) { 
+				bottle.position = bottle.originalPosition + glm::normalize(eye - bottle.originalPosition) * 1.5f;
 				bottle.turn = 90.0f;
 			}
-			// Faza 2: Czarny ekran (2.0-3.0s)
-			else if (elapsed < 2.0f + 1.0f + 1.0f +0.5f) {
-				// Faza 2: czarny ekran przez 1 sekundę (od 1.5s do 2.5s)
+			else if (elapsed < 4.5f) {
 				if (!blackScreen) {
 					blackScreen = true;
 					blackScreenStartTime = (float)glfwGetTime();
 				}
-			}  // Faza 3: Koniec animacji (po 3s)
+			}  
 			else {
-				// Faza 3: po 2.5s – usuń butelkę i wyłącz czarny ekran
-				 // Usuń butelkę i jej napis
 				bottle.isActive = false;
 				if (bottle.textIndex != -1) {
 					instances[bottle.textIndex].isActive = false;
 				}
-
-				Drinking = false;
-				blackScreen = false;
-				curBottleIndex = -1;
 				drinkCounter++;
+				curBottleIndex = -1;
+				Drinking = false;
+
+				if (drinkCounter != 4) {
+					blackScreen = false;
+				}
 			}
 		}
-
-
-
-		
+		if (drinkCounter == 4) {
+			exit(EXIT_SUCCESS);
+		}
+				
 		drawScene(window, eye);
-	
-
-		// 6) Obsłuż buffery i zdarzenia:
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
