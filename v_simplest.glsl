@@ -6,16 +6,23 @@ layout(location = 2) in vec2 texCoord0;
 uniform mat4 P;
 uniform mat4 V;
 uniform mat4 M;
-uniform vec3 viewPos;
 
 out vec3 fragNormal;
 out vec3 fragPos;
-
 out vec2 fragTexCoord;
 
 void main() {
     vec4 worldPos = M * vertex;
-    
-    gl_Position = P * V * worldPos;
+
+    // Przekazujemy pozycjê fragmentu w przestrzeni œwiata
+    fragPos = vec3(worldPos);
+
+    // Poprawne przekszta³cenie normalnych — M mo¿e skalowaæ, wiêc robimy transpose(inverse)
+    fragNormal = normalize(mat3(transpose(inverse(M))) * normal);
+
+    // Przekazujemy wspó³rzêdne tekstury
     fragTexCoord = texCoord0;
+
+    // Finalna pozycja w klip-space
+    gl_Position = P * V * worldPos;
 }
