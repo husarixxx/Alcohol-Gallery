@@ -243,7 +243,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	Model bottle2 = loadModel("obj//models//bottle2.obj");
 	Model bottle3 = loadModel("obj//models//bottle3.obj");
 	Model bottle4 = loadModel("obj//models//bottle4.obj");
-	Model text = loadModel("obj//models//wypij.obj");
+	Model text = loadModel("obj//models//wypij1.obj");
 	Model vip = loadModel("obj//models//vip.obj");
 	models.push_back(floorModel);
 	models.push_back(pedestal); 
@@ -284,10 +284,10 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 		{&models[6], glm::vec3(-4.0f, 2.5f, 0.0f), glm::vec3(0.8f), {tex3, tex17}, 90.0f },
 
-		{&models[10], glm::vec3(-9.5f, 0.65f, 0.0f), glm::vec3(0.001f), {tex16}, 90.0f },
-		{&models[10], glm::vec3(1.5f, 0.65f, 0.0f), glm::vec3(0.001f), {tex16}, 270.0f },
-		{&models[10], glm::vec3(-4.0f, 0.65f, -5.5f), glm::vec3(0.001f), {tex16}, 0.0f },
-		{&models[10], glm::vec3(-4.0f, 0.65f, 5.5f), glm::vec3(0.001f), {tex16}, 180.0f },
+		{&models[10], glm::vec3(-9.5f, 0.65f, 0.0f), glm::vec3(1.0f), {tex16}, 90.0f },
+		{&models[10], glm::vec3(1.5f, 0.65f, 0.0f), glm::vec3(1.0f), {tex16}, 270.0f },
+		{&models[10], glm::vec3(-4.0f, 0.65f, -5.5f), glm::vec3(1.0f), {tex16}, 0.0f },
+		{&models[10], glm::vec3(-4.0f, 0.65f, 5.5f), glm::vec3(1.0f), {tex16}, 180.0f },
 
 		{&models[11], glm::vec3(-9.5f, 0.0f, 0.0f), glm::vec3(0.0125f), {tex18}, 0.0f },
 		{&models[11], glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0125f), {tex18}, 0.0f },
