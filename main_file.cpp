@@ -139,6 +139,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		if (key == GLFW_KEY_LEFT) rotationDir = 1.0f;
 		if (key == GLFW_KEY_RIGHT) rotationDir = -1.0f;
 	}
+	if (action == GLFW_PRESS && drinkCounter >= 3 || action == GLFW_REPEAT && drinkCounter >= 3) {
+		if (key == GLFW_KEY_W) moveForward = -1.0f;
+		if (key == GLFW_KEY_S) moveForward = 1.0f;
+		if (key == GLFW_KEY_A) moveRight = 1.0f;
+		if (key == GLFW_KEY_D) moveRight = -1.0f;
+	}
 	if (action == GLFW_RELEASE) {
 		if (key == GLFW_KEY_W || key == GLFW_KEY_S) moveForward = 0.0f;
 		if (key == GLFW_KEY_A || key == GLFW_KEY_D) moveRight = 0.0f;

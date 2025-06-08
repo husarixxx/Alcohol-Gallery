@@ -22,7 +22,7 @@ void main() {
     vec2 modifiedTexCoord = fragTexCoord;
     
     if (drinkCounter > 0) {
-        float effectStrength = 0.005 * drinkCounter;        
+        float effectStrength = 0.01 * drinkCounter;        
         modifiedTexCoord.x += sin(time * 2.0 + fragTexCoord.y * 10.0) * effectStrength;
         modifiedTexCoord.y += cos(time * 1.7 + fragTexCoord.x * 8.0) * effectStrength;       
     }
@@ -44,7 +44,7 @@ void main() {
                 blur += texture(texUnits[i], modifiedTexCoord + vec2(-blurSize,  blurSize)) / 4.0;
                 blur += texture(texUnits[i], modifiedTexCoord + vec2( blurSize,  blurSize)) / 4.0;
             }
-            color = mix(color, blur, min(drinkCounter * 0.2, 0.7));
+            color = mix(color, blur, drinkCounter * 0.2);
         }
     }
     
