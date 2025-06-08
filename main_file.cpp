@@ -1,7 +1,6 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_SWIZZLE
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -11,11 +10,10 @@
 #include <stdio.h>
 #include "lodepng.h"
 #include "shaderprogram.h"
+#include "models.h"
 #include <iostream>
 
 const float PI = 3.141592653589793f;
-const float minX = -10.0f, maxX = 10.0f;
-const float minZ = -10.0f, maxZ = 10.0f;
 float aspectRatio = 1;
 float yaw = 0.0f;
 float moveSpeed = 1.5f;
@@ -25,33 +23,6 @@ bool Drinking = false;
 int curBottleIndex = -1;
 float drinkingStartTime = 0.0f;
 bool blackScreen = false;
-float blackScreenStartTime = 0.0f;
-
-struct Model {
-	GLuint vao;
-	GLuint vbo[4];
-	size_t vertexCount;
-};
-
-struct ModelInstance {
-	Model* model;
-	glm::vec3 position;
-	glm::vec3 scale;
-	std::vector<GLuint>textures;
-	float turn = 0.0f;
-	float floatAmplitude = 0.0f;
-	float floatSpeed = 0.0f;
-	float floatPhase = 0.0f;
-	
-	glm::vec3 basePosition; 
-	bool isBottle = false;
-	glm::vec3 originalPosition;
-	float drinkProgress = 0.0f;
-
-	int textIndex = -1;
-	bool isActive = true;  
-	bool shouldFloat = false;
-};
 
 std::vector<Model> models;
 std::vector<ModelInstance> instances;
@@ -66,60 +37,6 @@ ShaderProgram* sp;
 
 GLuint tex1, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10, tex11, tex12, tex13, tex14, tex15, tex16, tex17, tex18;
 
-Model loadModel(const char* filename) {
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string warn, err;
-
-	Model model = { 0 };
-	glGenVertexArrays(1, &model.vao);
-	glBindVertexArray(model.vao);
-
-	glGenBuffers(4, model.vbo);
-
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename)) {
-		fprintf(stderr, "Nie można wczytać modelu: %s\n", filename);
-		exit(1);
-	}
-
-	std::vector<float> vertices, normals, texCoords;
-
-	for (const auto& shape : shapes) {
-		for (const auto& index : shape.mesh.indices) {
-			vertices.push_back(attrib.vertices[3 * index.vertex_index + 0]);
-			vertices.push_back(attrib.vertices[3 * index.vertex_index + 1]);
-			vertices.push_back(attrib.vertices[3 * index.vertex_index + 2]);
-			vertices.push_back(1.0f);
-
-			if (!attrib.normals.empty() && index.normal_index >= 0) {
-				normals.push_back(attrib.normals[3 * index.normal_index + 0]);
-				normals.push_back(attrib.normals[3 * index.normal_index + 1]);
-				normals.push_back(attrib.normals[3 * index.normal_index + 2]);
-				normals.push_back(0.0f);
-			}
-
-			if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
-				texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 0]);
-				texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 1]);
-			}
-		}
-	}
-
-	glBindBuffer(GL_ARRAY_BUFFER, model.vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-	model.vertexCount = vertices.size() / 4;
-
-	glBindBuffer(GL_ARRAY_BUFFER, model.vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), normals.data(), GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, model.vbo[2]);
-	glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), texCoords.data(), GL_STATIC_DRAW);
-
-	glBindVertexArray(0);
-	return model;
-}
-
 void error_callback(int error, const char* description) {
 	fputs(description, stderr);
 }
@@ -130,7 +47,7 @@ bool isInside(glm::vec3 pos) {
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+	if (action == GLFW_PRESS && !Drinking || action == GLFW_REPEAT && !Drinking) {
 		if (key == GLFW_KEY_W) moveForward = 1.0f;
 		if (key == GLFW_KEY_S) moveForward = -1.0f;
 		if (key == GLFW_KEY_A) moveRight = -1.0f;
@@ -139,12 +56,16 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		if (key == GLFW_KEY_LEFT) rotationDir = 1.0f;
 		if (key == GLFW_KEY_RIGHT) rotationDir = -1.0f;
 	}
-	if (action == GLFW_PRESS && drinkCounter >= 3 || action == GLFW_REPEAT && drinkCounter >= 3) {
+	if (action == GLFW_PRESS && !Drinking && drinkCounter >= 3 || action == GLFW_REPEAT && !Drinking && drinkCounter >= 3) {
 		if (key == GLFW_KEY_W) moveForward = -1.0f;
 		if (key == GLFW_KEY_S) moveForward = 1.0f;
 		if (key == GLFW_KEY_A) moveRight = 1.0f;
 		if (key == GLFW_KEY_D) moveRight = -1.0f;
+
+		if (key == GLFW_KEY_LEFT) rotationDir = -1.0f;
+		if (key == GLFW_KEY_RIGHT) rotationDir = 1.0f;
 	}
+
 	if (action == GLFW_RELEASE) {
 		if (key == GLFW_KEY_W || key == GLFW_KEY_S) moveForward = 0.0f;
 		if (key == GLFW_KEY_A || key == GLFW_KEY_D) moveRight = 0.0f;
@@ -153,14 +74,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	}
 
 	if (key == GLFW_KEY_G && action == GLFW_PRESS && !Drinking) {
-		float minDistance = 5.0f;
+		float minDistance = 2.25f;
 		int closetIndex = -1;
 
 		for (int i = 0; i < instances.size(); i++) {
 			if (instances[i].isBottle) {
 				float distance = glm::distance(eye, instances[i].position);
 				if (distance < minDistance) {
-					minDistance = distance;
 					closetIndex = i;
 				}
 			}
@@ -172,7 +92,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 			instances[closetIndex].originalPosition = instances[closetIndex].position;
 			instances[closetIndex].drinkProgress = 0.0f;
 		}
-
 	}
 }
 
@@ -181,7 +100,6 @@ void windowResizeCallback(GLFWwindow* window, int width, int height) {
 	aspectRatio = (float)width / (float)height;
 	glViewport(0, 0, width, height);
 }
-
 
 GLuint readTexture(const char* filename) {
 	GLuint tex;
@@ -317,14 +235,14 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		return;		
 	}
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	glm::vec3 direction = glm::normalize(glm::vec3(sin(yaw), 0.0f, cos(yaw)));
 	glm::vec3 target = eye + glm::normalize(direction);
 	glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::mat4 V = glm::lookAt(eye, target, up);
-	glm::mat4 P = glm::perspective(50.0f * PI / 180.0f, aspectRatio, 0.01f, 50.0f);
+	glm::mat4 P = glm::perspective(60.0f * PI / 180.0f, aspectRatio, 0.01f, 60.0f);
 
 	allLights[0] = eye;
 
@@ -332,9 +250,8 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 	float lightCutoff = glm::cos(glm::radians(25.0f));  
 	float lightOuterCutoff = glm::cos(glm::radians(30.0f)); 
 	sp->use();
-	glUniform1f(sp->u("time"), (float)glfwGetTime());
+	glUniform1f(sp->u("time"), glfwGetTime());
 	glUniform1i(sp->u("drinkCounter"), drinkCounter);
-
 
 	glUniformMatrix4fv(sp->u("P"), 1, false, glm::value_ptr(P));
 	glUniformMatrix4fv(sp->u("V"), 1, false, glm::value_ptr(V));
@@ -368,24 +285,19 @@ void drawScene(GLFWwindow* window, glm::vec3 eye) {
 		glBindBuffer(GL_ARRAY_BUFFER, model.vbo[0]);
 		glVertexAttribPointer(sp->a("vertex"), 4, GL_FLOAT, false, 0, 0);
 
-		if (sp->a("normal") != -1) {
-			glEnableVertexAttribArray(sp->a("normal"));
-			glBindBuffer(GL_ARRAY_BUFFER, model.vbo[1]);
-			glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, 0);
-		}
+		glEnableVertexAttribArray(sp->a("normal"));
+		glBindBuffer(GL_ARRAY_BUFFER, model.vbo[1]);
+		glVertexAttribPointer(sp->a("normal"), 4, GL_FLOAT, false, 0, 0);
 
-		if (sp->a("texCoord0") != -1) {
-			glEnableVertexAttribArray(sp->a("texCoord0"));
-			glBindBuffer(GL_ARRAY_BUFFER, model.vbo[2]);
-			glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, 0);
-		}
-
+		glEnableVertexAttribArray(sp->a("texCoord0"));
+		glBindBuffer(GL_ARRAY_BUFFER, model.vbo[2]);
+		glVertexAttribPointer(sp->a("texCoord0"), 2, GL_FLOAT, false, 0, 0);
+		
 		glm::mat4 M = glm::translate(glm::mat4(1.0f), instance.position);
 
 		if (instance.isBottle && Drinking && &instance == &instances[curBottleIndex]) {
 			glm::vec3 toCamera = glm::normalize(eye - instance.position);
 
-			glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 			glm::vec3 right = glm::normalize(glm::cross(toCamera, up));
 			up = glm::normalize(glm::cross(right, toCamera));
 
@@ -480,7 +392,7 @@ int main(void)
 		}
 
 		if (Drinking) {
-			float elapsed = (float)(glfwGetTime() - drinkingStartTime);
+			float elapsed = glfwGetTime() - drinkingStartTime;
 			auto& bottle = instances[curBottleIndex];
 			if (elapsed < 2.0f) {
 				auto& bottle = instances[curBottleIndex];
@@ -497,7 +409,6 @@ int main(void)
 			else if (elapsed < 4.5f) {
 				if (!blackScreen) {
 					blackScreen = true;
-					blackScreenStartTime = (float)glfwGetTime();
 				}
 			}  
 			else {

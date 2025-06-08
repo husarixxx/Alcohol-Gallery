@@ -131,6 +131,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="lodepng.h" />
+    <ClInclude Include="models.h" />
     <ClInclude Include="shaderprogram.h" />
     <ClInclude Include="tiny_obj_loader.h" />
   </ItemGroup>

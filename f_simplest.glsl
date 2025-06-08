@@ -24,7 +24,7 @@ void main() {
     if (drinkCounter > 0) {
         float effectStrength = 0.01 * drinkCounter;        
         modifiedTexCoord.x += sin(time * 2.0 + fragTexCoord.y * 10.0) * effectStrength;
-        modifiedTexCoord.y += cos(time * 1.7 + fragTexCoord.x * 8.0) * effectStrength;       
+        modifiedTexCoord.y += cos(time * 2.0 + fragTexCoord.x * 10.0) * effectStrength;       
     }
     
     for (int i = 0; i < numTextures; ++i) {
