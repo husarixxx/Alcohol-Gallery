@@ -37,7 +37,7 @@ Wraz z każdym kolejnym „napiciem się” z wybranej butelki,  widok zniekszta
 - **Interakcja z butelkami:**  
   Kliknij klawisz G na wybraną butelkę, aby się z niej napić 
 - **Efekty spożycia:**  
-  Każda kolejna interakcja  zniekształca widok . Pojawia się Unoszący dywan po wypiciu trzeciej butelki
+  Każda kolejna interakcja  zniekształca widok . Pojawia się Unoszący dywan po wypiciu trzeciej butelki. Dodatkowo pojawia się też zmiana sterowania .
 
 ---
 
