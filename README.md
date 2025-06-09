@@ -1,46 +1,47 @@
-# Wirtualna Galeria Alkoholi 🍾
+# Virtual Alcohol Gallery 🍾
 
-Projekt: **Wirtualna galeria alkoholi**  
-Autorzy: [husarixxx](https://github.com/husarixxx), [tomaszdwoznik](https://github.com/tomaszdwoznik), 
-Repozytorium: [computerGraphicsProject](https://github.com/husarixxx/computerGraphicsProject)
-
----
-
-## Opis
-
-Wirtualna galeria alkoholi to interaktywny program pozwalający na spacer po galerii prezentującej różne rodzaje alkoholi.  
-Użytkownik może:
-
-- Swobodnie zwiedzać galerię z perspektywy pierwszej osoby
-- Oglądać różnorodne butelki alkoholi
-- Wybrać dowolne butelki i napić się z nich
-
-**Efekt specjalny:**  
-Wraz z każdym kolejnym „napiciem się” z wybranej butelki,  widok zniekształca się – symulując typowe zaburzenia percepcji po spożyciu alkoholu 
+Project: **Virtual Alcohol Gallery**  
+Authors: [husarixxx](https://github.com/husarixxx), [tomaszdwoznik](https://github.com/tomaszdwoznik)  
+Repository: [computerGraphicsProject](https://github.com/husarixxx/computerGraphicsProject)
 
 ---
 
-## Jak uruchomić? 🚀
-1. **Uruchamianie:**
-   - Otwórz plik rozwiązania `.sln` w Visual Studio:  
+## Description
+
+The Virtual Alcohol Gallery is an interactive program that allows you to walk through a gallery showcasing various types of alcoholic beverages.  
+The user can:
+
+- Freely explore the gallery from a first-person perspective
+- View a variety of alcohol bottles
+- Select any bottle and "take a drink" from it
+
+**Special Effect:**  
+With each subsequent "drink" from a chosen bottle, the view becomes more distorted – simulating the typical perceptual disturbances experienced after alcohol consumption.
+
+---
+
+## How to Run? 🚀
+
+1. **Launching:**
+   - Open the `.sln` solution file in Visual Studio:  
      **computerGraphicsProject.sln**
-   - Uruchom
+   - Run the project
 
 ---
 
-## Sterowanie 
+## Controls
 
-- **Poruszanie się:**  
-  Standardowe sterowanie klawisze WSAD
-- **Obracanie widoku:**  
-   Strzałki
-- **Interakcja z butelkami:**  
-  Kliknij klawisz G na wybraną butelkę, aby się z niej napić 
-- **Efekty spożycia:**  
-  Każda kolejna interakcja  zniekształca widok . Pojawia się Unoszący dywan po wypiciu trzeciej butelki. Dodatkowo pojawia się też zmiana sterowania .
+- **Movement:**  
+  Standard WASD keys
+- **Look around:**  
+  Arrow keys
+- **Interact with bottles:**  
+  Press the G key while looking at a selected bottle to take a drink
+- **Consumption effects:**  
+  Each additional drink further distorts the view. "Flying carpet" effect appears after the third drink. Additionally, controls are altered as the effects increase.
 
 ---
 
-Projekt ramach przedmiotu "Grafika Komputerowa i Wizualizacja"
+Project created for the "Computer Graphics and Visualization" course.
 
-**Na zdrowie! 🥂**
+**Cheers! 🥂**
