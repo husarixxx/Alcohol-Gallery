@@ -1,5 +1,7 @@
 # Virtual Alcohol Gallery 🍾
 
+![Image](https://github.com/user-attachments/assets/837d9edd-1804-4e6b-98ee-556e9e038d79)
+
 Project: **Virtual Alcohol Gallery**  
 Authors: [husarixxx](https://github.com/husarixxx), [tomaszdwoznik](https://github.com/tomaszdwoznik)  
 Repository: [computerGraphicsProject](https://github.com/husarixxx/computerGraphicsProject)
@@ -20,6 +22,7 @@ With each subsequent "drink" from a chosen bottle, the view becomes more distort
 
 ---
 
+
 ## How to Run? 🚀
 
 1. **Launching:**
@@ -38,9 +41,10 @@ With each subsequent "drink" from a chosen bottle, the view becomes more distort
 - **Interact with bottles:**  
   Press the G key while looking at a selected bottle to take a drink
 - **Consumption effects:**  
-  Each additional drink further distorts the view. "Flying carpet" effect appears after the third drink. Additionally, controls are altered as the effects increase.
-
+  Each additional drink further distorts the view. "Flying carpet" effect appears after the third drink. Additionally, controls are altered as the effects increase
 ---
+![Image](https://github.com/user-attachments/assets/a04c2193-0642-4ff8-a2b7-4b4e73b9748a)
+
 
 Project created for the "Computer Graphics and Visualization" course.
 
